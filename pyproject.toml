@@ -1,0 +1,57 @@
+[project]
+name = "snake-rl"
+version = "0.1.0"
+description = "Snake game environment with Deep Q-Network (DQN) agent for reinforcement learning"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    {name = "AI Agents Course", email = "noreply@example.com"}
+]
+license = {file = "LICENSE"}
+keywords = ["reinforcement-learning", "dqn", "snake-game", "pytorch", "pygame", "ai-agents"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "gymnasium>=1.2.1",
+    "matplotlib>=3.10.6",
+    "numpy>=2.3.3",
+    "pygame>=2.6.1",
+    "torch>=2.8.0",
+    "torchvision>=0.23.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "black>=24.0.0",
+    "flake8>=7.0.0",
+    "isort>=5.13.0",
+]
+
+[project.scripts]
+snake-rl-train = "src.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
