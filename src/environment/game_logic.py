@@ -1,0 +1,232 @@
+import random
+import numpy as np
+from typing import List, Tuple, Optional
+
+from .constants import UP, RIGHT, DOWN, LEFT, EMPTY, SNAKE_BODY, SNAKE_HEAD, FOOD, REWARD_FOOD, REWARD_DEATH, REWARD_STEP
+
+
+class SnakeGame:
+    """Core Snake game logic implementation.
+
+    Handles game state, movement, collision detection, and scoring.
+    Uses integer grid coordinates and direction constants.
+    """
+
+    def __init__(self, grid_size: int = 20, initial_length: int = 1, seed: Optional[int] = None):
+        """Initialize Snake game.
+
+        Args:
+            grid_size: Size of square game grid (default: 20x20)
+            initial_length: Initial length of snake (default: 1)
+            seed: Optional random seed for reproducible games
+        """
+        self.grid_size = grid_size
+        self.initial_length = initial_length
+        self.reset(seed)
+
+    def reset(self, seed: Optional[int] = None) -> np.ndarray:
+        """Reset game to initial state.
+
+        Args:
+            seed: Optional random seed for reproducible resets
+
+        Returns:
+            Initial game state as grid array
+        """
+        if seed is not None:
+            random.seed(seed)
+            np.random.seed(seed)
+
+        self.snake = self._create_initial_snake()
+        self.direction = RIGHT
+        self.food = self._spawn_food()
+        self.score = 0
+        self.steps = 0
+        self.game_over = False
+
+        return self.get_state()
+
+    def _create_initial_snake(self) -> List[Tuple[int, int]]:
+        """Create initial snake with specified length.
+
+        Creates snake starting from center, extending leftward horizontally.
+        Validates that snake fits within grid.
+
+        Returns:
+            List of (x, y) positions from head to tail
+
+        Raises:
+            ValueError: If initial_length is too large for grid_size
+        """
+        center_x = self.grid_size // 2
+        center_y = self.grid_size // 2
+
+        # Validate snake fits in grid horizontally
+        if self.initial_length > self.grid_size:
+            raise ValueError(f"Initial length {self.initial_length} too large for grid size {self.grid_size}")
+
+        # Create snake extending leftward from center
+        snake = []
+        for i in range(self.initial_length):
+            x = center_x - i
+            if x < 0:
+                raise ValueError(f"Initial length {self.initial_length} too large for horizontal placement")
+            snake.append((x, center_y))
+
+        return snake
+
+    def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
+        """Execute one game step with given action.
+
+        Args:
+            action: Direction to move (UP=0, RIGHT=1, DOWN=2, LEFT=3)
+
+        Returns:
+            observation: Current game state as grid array
+            reward: Reward for this step (food=+10, death=-10, step=-0.01)
+            done: True if game ended (collision occurred)
+            info: Dictionary with game statistics
+        """
+        if self.game_over:
+            return self.get_state(), 0, True, {"score": self.score}
+
+        self.direction = action
+        self.steps += 1
+
+        head_x, head_y = self.snake[0]
+
+        if self.direction == UP:
+            new_head = (head_x, head_y - 1)
+        elif self.direction == RIGHT:
+            new_head = (head_x + 1, head_y)
+        elif self.direction == DOWN:
+            new_head = (head_x, head_y + 1)
+        elif self.direction == LEFT:
+            new_head = (head_x - 1, head_y)
+
+        reward = REWARD_STEP
+
+        if self._is_collision(new_head):
+            self.game_over = True
+            reward = REWARD_DEATH
+            return self.get_state(), reward, True, {"score": self.score}
+
+        self.snake.insert(0, new_head)
+
+        if new_head == self.food:
+            self.score += 1
+            reward = REWARD_FOOD
+            self.food = self._spawn_food()
+        else:
+            self.snake.pop()
+
+        return self.get_state(), reward, self.game_over, {"score": self.score}
+
+    def _is_collision(self, position: Tuple[int, int]) -> bool:
+        """Check if position would result in collision.
+
+        Args:
+            position: Grid position (x, y) to check
+
+        Returns:
+            True if collision would occur (wall or self-collision)
+        """
+        x, y = position
+
+        if x < 0 or x >= self.grid_size or y < 0 or y >= self.grid_size:
+            return True
+
+        # Check collision with snake body (excluding tail which will be removed)
+        if position in self.snake[:-1]:
+            return True
+
+        return False
+
+    def _spawn_food(self) -> Tuple[int, int]:
+        """Spawn food at random empty position.
+
+        Returns:
+            Food position (x, y) that doesn't overlap with snake
+        """
+        while True:
+            food_pos = (
+                random.randint(0, self.grid_size - 1),
+                random.randint(0, self.grid_size - 1)
+            )
+            if food_pos not in self.snake:
+                return food_pos
+
+    def get_state(self) -> np.ndarray:
+        """Generate grid state representation using defined constants."""
+        state = np.full((self.grid_size, self.grid_size), EMPTY, dtype=np.int32)
+
+        # Mark snake body segments
+        for segment in self.snake:
+            x, y = segment
+            state[y, x] = SNAKE_BODY
+
+        # Mark snake head (overrides body at head position)
+        head_x, head_y = self.snake[0]
+        state[head_y, head_x] = SNAKE_HEAD
+
+        # Mark food
+        food_x, food_y = self.food
+        state[food_y, food_x] = FOOD
+
+        return state
+
+    def get_head_position(self) -> Tuple[int, int]:
+        """Get current snake head position.
+
+        Returns:
+            Head position as (x, y) coordinates
+        """
+        return self.snake[0]
+
+    def get_food_position(self) -> Tuple[int, int]:
+        """Get current food position.
+
+        Returns:
+            Food position as (x, y) coordinates
+        """
+        return self.food
+
+    def get_snake_body(self) -> List[Tuple[int, int]]:
+        """Get complete snake body positions.
+
+        Returns:
+            List of (x, y) positions from head to tail
+        """
+        return self.snake.copy()
+
+    def get_direction(self) -> int:
+        """Get current movement direction.
+
+        Returns:
+            Current direction (UP=0, RIGHT=1, DOWN=2, LEFT=3)
+        """
+        return self.direction
+
+    def is_game_over(self) -> bool:
+        """Check if game has ended.
+
+        Returns:
+            True if collision occurred and game ended
+        """
+        return self.game_over
+
+    def get_score(self) -> int:
+        """Get current game score.
+
+        Returns:
+            Number of food items eaten
+        """
+        return self.score
+
+    def get_steps(self) -> int:
+        """Get number of steps taken.
+
+        Returns:
+            Total steps since last reset
+        """
+        return self.steps

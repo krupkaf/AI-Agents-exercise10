@@ -60,7 +60,11 @@ uv run pytest tests/
 - **Snake Game Logic**: Core mechanics (movement, collision, food spawning)
 - **Gymnasium Interface**: Standard RL environment API
 - **State Representation**: 20x20 grid or feature vector
-- **Reward System**: +10 food, -10 death, -1 step
+- **Food System**: Single food item, immediate respawn at random empty position
+- **Snake Growth**: Initial length 1 segment, grows by 1 segment per food eaten
+- **Episode Limit**: 1000 steps maximum (configurable in SnakeEnv)
+- **Termination**: `terminated` (collision) vs `truncated` (time limit)
+- **Reward System**: +10 food, -10 death, -0.01 step
 
 ### Agent (`src/agent/`)
 - **DQN Network**: Convolutional + Dense layers
@@ -70,8 +74,9 @@ uv run pytest tests/
 
 ### Visualization (`src/visualization/`)
 - **Real-time Rendering**: 800x600 PyGame window
-- **Training Statistics**: Live performance graphs
+- **Training Statistics**: Live performance graphs (StatsTracker utility class)
 - **Interactive Controls**: Pause, screenshot, speed control
+- **Statistics Export**: Matplotlib plots and JSON logging (ready for DQN training)
 
 ## Configuration
 
@@ -141,6 +146,7 @@ snake-rl/
 │   ├── visualization/  # PyGame rendering
 │   ├── utils/          # Configuration and utilities
 │   └── main.py         # Training and testing script
+├── demo/               # Demo scripts
 ├── tests/              # Unit tests
 ├── models/             # Saved model checkpoints
 ├── results/            # Training logs and screenshots
