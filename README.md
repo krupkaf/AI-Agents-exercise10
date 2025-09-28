@@ -88,7 +88,7 @@ uv run python demo/visualization.py
 - **Snake Growth**: Initial length 1 segment, grows by 1 segment per food eaten
 - **Episode Limit**: 1000 steps maximum (configurable in SnakeEnv)
 - **Termination**: `terminated` (collision) vs `truncated` (time limit)
-- **Reward System**: +20 food, -10 death, -0.001 step, -1 revisit, -3 oscillate (anti-stuck design)
+- **Reward System**: Multi-component anti-stuck design (see constants.py for values)
 
 ### Agents (`src/agent/`)
 
@@ -141,19 +141,22 @@ TARGET_UPDATE_FREQ = 100
 The reward system is specifically designed to prevent the snake from getting stuck in safe positions and encourage active food exploration:
 
 **Positive Rewards:**
-- `+20.0` for eating food (doubled from original +10 to encourage active seeking)
+- Food consumption reward (encourages active seeking)
+- Distance-based guidance (Manhattan distance rewards for each step closer to food)
 
 **Minimal Exploration Penalty:**
-- `-0.001` per step (reduced from -0.01 to allow longer exploration without heavy penalty)
+- Small per-step penalty (allows longer exploration without heavy discouragement)
 
 **Anti-Stuck Penalties:**
-- `-1.0` for returning to any previously visited position
-- `-3.0` for oscillating between two positions (returning to position from 2 steps ago)
+- Revisit penalty for returning to previously visited positions
+- Heavy oscillation penalty for ping-pong behavior between positions
 
 **Game Over Penalty:**
-- `-10.0` for collision/death
+- Collision/death penalty
 
-This design eliminates the common problem where DQN agents learn to "ping-pong" between safe positions indefinitely, instead forcing them to actively explore and seek food.
+**All reward values are defined in `src/environment/constants.py` for easy tuning.**
+
+This design eliminates the common problem where DQN agents learn to "ping-pong" between safe positions indefinitely, instead forcing them to actively explore and seek food. The distance-based guidance provides immediate feedback on movement direction, acting like a "hot/cold" game to lead the snake toward food.
 
 ## Results
 

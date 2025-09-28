@@ -94,7 +94,7 @@ snake-rl/
 - ✅ Snake game logic (movement, collision, food spawning) - `src/environment/game_logic.py` complete
 - ✅ Gymnasium-compatible wrapper - `src/environment/snake_env.py` with proper interface
 - ✅ State representation (20x20 grid) - implemented with proper encoding via constants.py
-- ✅ Action space (4 directions) + reward system - +10 food, -10 collision, -0.01 step verified
+- ✅ Action space (4 directions) + reward system verified
 - ✅ Food system - single food item, immediate respawn at random empty position working
 - ✅ Snake mechanics - initial length 1, grows by 1 segment per food eaten confirmed
 - ✅ Unit tests for environment - `tests/test_environment.py` **ALL 17 TESTS PASSING**
@@ -163,11 +163,13 @@ snake-rl/
   - `terminated=True`: Collision occurred (snake died)
   - `truncated=True`: Time limit reached (1000 steps)
 - **Reward System** (Anti-Oscillation Design):
-  - +20 for eating food (increased to encourage active seeking)
-  - -10 for collision/death
-  - -0.001 for each step (minimal exploration penalty)
-  - -1.0 for returning to previously visited position
-  - -3.0 for oscillating (returning to position from 2 steps ago)
+  - Food consumption reward (encourages active seeking)
+  - Collision/death penalty
+  - Minimal step penalty (allows exploration)
+  - Revisit penalty for returning to visited positions
+  - Heavy oscillation penalty for ping-pong behavior
+  - Distance-based guidance rewards (Manhattan distance calculation for hot/cold feedback)
+  - All values defined in `src/environment/constants.py`
 
 ### Implemented Algorithms
 

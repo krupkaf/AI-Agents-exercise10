@@ -2,7 +2,7 @@ import random
 import numpy as np
 from typing import List, Tuple, Optional
 
-from .constants import UP, RIGHT, DOWN, LEFT, EMPTY, SNAKE_BODY, SNAKE_HEAD, FOOD, REWARD_FOOD, REWARD_DEATH, REWARD_STEP, REWARD_REVISIT, REWARD_OSCILLATE
+from .constants import UP, RIGHT, DOWN, LEFT, EMPTY, SNAKE_BODY, SNAKE_HEAD, FOOD, REWARD_FOOD, REWARD_DEATH, REWARD_STEP, REWARD_REVISIT, REWARD_OSCILLATE, REWARD_CLOSER, REWARD_FARTHER
 
 
 class SnakeGame:
@@ -48,6 +48,9 @@ class SnakeGame:
         self.visited_positions = set()  # All positions ever visited
         self.position_history = []      # Last few positions for oscillation detection
 
+        # Track distance to food for guidance rewards
+        self.previous_distance_to_food = self._manhattan_distance(self.snake[0], self.food)
+
         return self.get_state()
 
     def _create_initial_snake(self) -> List[Tuple[int, int]]:
@@ -87,7 +90,7 @@ class SnakeGame:
 
         Returns:
             observation: Current game state as grid array
-            reward: Reward for this step (food=+20, death=-10, step=-0.001, revisit=-1, oscillate=-3)
+            reward: Reward for this step (see constants.py for reward values)
             done: True if game ended (collision occurred)
             info: Dictionary with game statistics
         """
@@ -119,6 +122,10 @@ class SnakeGame:
         position_penalty = self._calculate_position_penalty(new_head)
         reward += position_penalty
 
+        # Apply distance-based reward for food guidance
+        distance_reward = self._calculate_distance_reward(new_head)
+        reward += distance_reward
+
         self.snake.insert(0, new_head)
 
         # Update position tracking
@@ -128,6 +135,8 @@ class SnakeGame:
             self.score += 1
             reward = REWARD_FOOD
             self.food = self._spawn_food()
+            # Update distance tracking for new food position
+            self.previous_distance_to_food = self._manhattan_distance(self.snake[0], self.food)
         else:
             self.snake.pop()
 
@@ -255,11 +264,11 @@ class SnakeGame:
 
         # Check if returning to previously visited position
         if new_head in self.visited_positions:
-            penalty += REWARD_REVISIT  # -1.0
+            penalty += REWARD_REVISIT
 
         # Check if oscillating (returning to position from 2 steps ago)
         if len(self.position_history) >= 2 and new_head == self.position_history[-2]:
-            penalty += REWARD_OSCILLATE  # -3.0
+            penalty += REWARD_OSCILLATE
 
         return penalty
 
@@ -276,3 +285,43 @@ class SnakeGame:
         self.position_history.append(new_head)
         if len(self.position_history) > 3:
             self.position_history.pop(0)
+
+    def _manhattan_distance(self, pos1: Tuple[int, int], pos2: Tuple[int, int]) -> float:
+        """Calculate Manhattan distance between two positions.
+
+        Args:
+            pos1: First position (x, y)
+            pos2: Second position (x, y)
+
+        Returns:
+            Manhattan distance as float
+        """
+        return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+
+    def _calculate_distance_reward(self, new_head: Tuple[int, int]) -> float:
+        """Calculate reward based on distance change to food.
+
+        Args:
+            new_head: New head position to evaluate
+
+        Returns:
+            Distance-based reward (positive if closer, negative if farther)
+        """
+        # Calculate new distance with the proposed move
+        new_distance = self._manhattan_distance(new_head, self.food)
+
+        # Compare with previous distance
+        if new_distance < self.previous_distance_to_food:
+            # Moving closer to food
+            distance_reward = REWARD_CLOSER
+        elif new_distance > self.previous_distance_to_food:
+            # Moving farther from food
+            distance_reward = REWARD_FARTHER
+        else:
+            # Same distance (rare, but possible)
+            distance_reward = 0.0
+
+        # Update previous distance for next step
+        self.previous_distance_to_food = new_distance
+
+        return distance_reward
