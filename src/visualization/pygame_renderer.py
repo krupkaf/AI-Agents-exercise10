@@ -40,6 +40,7 @@ class PyGameRenderer:
 
         self.paused = False
         self.fps = 10
+        self.skip_episode = False  # Flag for episode skip request
 
     def render(self, game: SnakeGame, episode: int = 0, epsilon: float = 0.0,
                total_reward: float = 0.0, steps: int = 0) -> None:
@@ -191,6 +192,8 @@ class PyGameRenderer:
                     self.fps = max(1, self.fps - 5)
                 elif event.key == pygame.K_s:
                     self._save_screenshot()
+                elif event.key == pygame.K_ESCAPE:
+                    self.skip_episode = True
 
         return True
 
@@ -211,6 +214,14 @@ class PyGameRenderer:
     def is_paused(self) -> bool:
         """Check if renderer is paused."""
         return self.paused
+
+    def is_episode_skip_requested(self) -> bool:
+        """Check if episode skip was requested."""
+        return self.skip_episode
+
+    def reset_episode_skip(self) -> None:
+        """Reset episode skip flag."""
+        self.skip_episode = False
 
     def close(self) -> None:
         """Close the renderer and clean up resources."""

@@ -36,6 +36,7 @@ def demo_pygame_visualization():
     print("  SPACE - Pause/Resume")
     print("  UP/DOWN - Adjust speed")
     print("  S - Screenshot")
+    print("  ESC - Skip current episode")
     print("  Q - Quit")
 
     running = True
@@ -45,7 +46,24 @@ def demo_pygame_visualization():
         # Handle PyGame events
         running = renderer.handle_events()
 
-        if not renderer.is_paused() and game_running:
+        # Check for episode skip request
+        if renderer.is_episode_skip_requested():
+            print(f"Episode {episode} skipped by user - Score: {game.get_score()}, "
+                  f"Steps: {steps}, Reward: {total_reward:.1f}")
+
+            # Reset for next episode (same as natural completion)
+            episode += 1
+            epsilon = max(0.01, epsilon * 0.995)  # Decay epsilon
+            total_reward = 0.0
+            steps = 0
+            game.reset()
+            renderer.reset_episode_skip()  # Clear the skip flag
+
+            # Stop after configured number of episodes
+            if episode > MAX_EPISODES:
+                game_running = False
+
+        elif not renderer.is_paused() and game_running:
             # Random action for testing
             action = random.choice([0, 1, 2, 3])  # UP, RIGHT, DOWN, LEFT
             state, reward, done, info = game.step(action)

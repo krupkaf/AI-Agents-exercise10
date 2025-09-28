@@ -244,6 +244,12 @@ class UniversalTrainer:
                     quit_requested = True
                     break
 
+                # Check for episode skip request
+                if self.renderer.is_episode_skip_requested():
+                    print("Episode skip requested by user")
+                    self.renderer.reset_episode_skip()
+                    break
+
                 # Handle pause state
                 while self.renderer.paused:
                     if not self.renderer.handle_events():

@@ -103,7 +103,7 @@ snake-rl/
 - ✅ Game window (800x600px) with grid rendering - `src/visualization/pygame_renderer.py` functional
 - ✅ Real-time snake/food/background display - full color theme in `colors.py` implemented
 - ✅ Info panel: score, episode, epsilon, steps - complete statistics display working
-- ✅ Control features: pause, screenshot, FPS control - SPACE, S, UP/DOWN keys verified
+- ✅ Control features: pause, screenshot, FPS control, episode skip - SPACE, S, UP/DOWN, ESC keys verified
 - ✅ Integration with training loop - `demo/visualization.py` (demo with random agent) tested
 - ✅ StatsTracker utility class - `src/visualization/stats_display.py` (ready for DQN training)
 
@@ -195,7 +195,7 @@ snake-rl/
 - **Game display**: 20x20 grid with snake and food
 - **Statistics panel**: Score, episode, epsilon, steps
 - **Training monitoring**: Live graphs of performance metrics
-- **Interactive controls**: Pause, resume, screenshot, speed control
+- **Interactive controls**: Pause, resume, screenshot, speed control, episode skip
 
 ## Installation Commands
 ```bash

@@ -64,6 +64,20 @@ uv run python src/main.py --agent reinforce --mode test --load-model models/rein
 uv run pytest tests/
 ```
 
+### Demo & Visualization
+
+```bash
+# Run interactive demo with random agent
+uv run python demo/visualization.py
+
+# Interactive controls during training/testing:
+# SPACE - Pause/Resume
+# UP/DOWN - Adjust speed
+# S - Screenshot
+# ESC - Skip current episode
+# Q - Quit
+```
+
 ## Architecture
 
 ### Environment (`src/environment/`)
