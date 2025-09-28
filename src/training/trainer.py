@@ -222,11 +222,14 @@ class UniversalTrainer:
                 agent_info = self.agent.get_training_info()
 
                 # Update stats display
+                # Only pass epsilon for DQN agents
+                epsilon_value = agent_info.get('epsilon') if 'epsilon' in agent_info else None
+
                 stats_data = {
                     'episode': self.episode,
                     'score': total_reward,
                     'steps': steps,
-                    'epsilon': agent_info.get('epsilon', 0.0),
+                    'epsilon': epsilon_value,
                     'avg_score': np.mean(self.episode_scores[-100:]) if self.episode_scores else 0.0
                 }
 
@@ -339,12 +342,16 @@ class UniversalTrainer:
         # Get agent-specific info
         agent_info = self.agent.get_training_info()
 
+        # Show epsilon only for DQN agents (policy gradient methods don't use epsilon)
+        epsilon_str = ""
+        if 'epsilon' in agent_info:
+            epsilon_str = f" | Epsilon: {agent_info['epsilon']:.3f}"
+
         print(f"Episode {episode:4d} | "
               f"Score: {score:6.1f} | "
               f"Length: {length:3d} | "
               f"Avg(100): {avg_score:6.1f} | "
-              f"Best: {self.best_score:6.1f} | "
-              f"Epsilon: {agent_info.get('epsilon', 0):.3f}")
+              f"Best: {self.best_score:6.1f}{epsilon_str}")
 
     def _check_early_stopping(self) -> bool:
         """Check if early stopping criteria are met."""

@@ -16,12 +16,21 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from src.environment.snake_env import SnakeEnv
 from src.agent.dqn_agent import DQNAgent
+from src.agent.reinforce_agent import REINFORCEAgent
+from src.agent.ppo_agent import PPOAgent
 from src.training.trainer import UniversalTrainer
+from src.training.comparison import AgentComparison
 from src.utils.config import (
     get_agent_config,
     get_env_config,
     get_device,
     EnvironmentConfig
+)
+from src.utils.model_utils import (
+    detect_model_type,
+    validate_model_agent_compatibility,
+    suggest_correct_agent_type,
+    get_model_info
 )
 
 
@@ -43,11 +52,9 @@ def create_agent(agent_type: str, state_dim: int, action_dim: int, device: torch
     if agent_type == 'dqn':
         return DQNAgent(state_dim, action_dim, device, config)
     elif agent_type == 'reinforce':
-        # TODO: Implement REINFORCE agent
-        raise NotImplementedError("REINFORCE agent not yet implemented")
+        return REINFORCEAgent(state_dim, action_dim, device, config)
     elif agent_type == 'ppo':
-        # TODO: Implement PPO agent
-        raise NotImplementedError("PPO agent not yet implemented")
+        return PPOAgent(state_dim, action_dim, device, config)
     else:
         raise ValueError(f"Unknown agent type: {agent_type}")
 
@@ -120,8 +127,6 @@ def train_agent(args):
 
 def test_agent(args):
     """Test a trained agent."""
-    print(f"Testing {args.agent.upper()} agent...")
-
     if not args.load_model:
         print("Error: --load-model is required for testing")
         return
@@ -129,6 +134,31 @@ def test_agent(args):
     if not os.path.exists(args.load_model):
         print(f"Error: Model file not found: {args.load_model}")
         return
+
+    # Auto-detect agent type if requested
+    if args.auto_detect:
+        detected_type = detect_model_type(args.load_model)
+        if detected_type is None:
+            print(f"Error: Could not auto-detect model type from {args.load_model}")
+            return
+        args.agent = detected_type
+        print(f"Auto-detected agent type: {detected_type}")
+
+    print(f"Testing {args.agent.upper()} agent...")
+
+    # Detect model type and check compatibility
+    detected_type = detect_model_type(args.load_model)
+    if detected_type is None:
+        print(f"Warning: Could not detect model type from {args.load_model}")
+        print("Proceeding with specified agent type, but this may fail...")
+    elif detected_type != args.agent:
+        print(f"Error: Model type mismatch!")
+        print(f"  Specified agent: {args.agent}")
+        print(f"  Detected model type: {detected_type}")
+        print(f"  Suggestion: Use '--agent {detected_type}' or '--auto-detect' instead")
+        return
+
+    print(f"Model type verified: {detected_type}")
 
     # Get device
     device = get_device()
@@ -170,43 +200,72 @@ def test_agent(args):
 
 
 def compare_agents(args):
-    """Compare multiple agents."""
-    print("Comparing multiple agents...")
-    print(f"Episodes per agent: {args.episodes}")
+    """Compare multiple agents using the AgentComparison framework."""
+    print("Starting comprehensive agent comparison...")
 
-    # Agents to compare
-    agents_to_compare = ['dqn']  # Start with DQN, add others when implemented
+    # Create comparison framework
+    comparison = AgentComparison(
+        env_config={
+            'grid_size': EnvironmentConfig.GRID_SIZE,
+            'max_steps': EnvironmentConfig.MAX_STEPS
+        },
+        results_dir=f"{args.save_dir}/comparison",
+        models_dir=f"{args.save_dir}/comparison/models"
+    )
 
-    results = {}
+    # All available agents
+    agents_to_compare = ['dqn', 'reinforce', 'ppo']
 
-    for agent_type in agents_to_compare:
-        print(f"\n{'='*20} Training {agent_type.upper()} {'='*20}")
+    # Run comprehensive comparison
+    results = comparison.run_comparison(
+        agents_to_compare=agents_to_compare,
+        episodes_per_agent=args.episodes,
+        evaluation_episodes=args.test_episodes,
+        enable_rendering=not args.headless,
+        save_models=True
+    )
 
-        # Modify args for this agent
-        args_copy = argparse.Namespace(**vars(args))
-        args_copy.agent = agent_type
-        args_copy.save_dir = f"{args.save_dir}/{agent_type}"
+    print(f"\n{'='*60}")
+    print("COMPREHENSIVE COMPARISON COMPLETED")
+    print(f"{'='*60}")
+    print(f"Results saved to: {args.save_dir}/comparison/")
+    print("Check the comparison plots and JSON results for detailed analysis.")
 
-        try:
-            # Train agent
-            train_agent(args_copy)
 
-            # Test agent
-            args_copy.mode = 'test'
-            args_copy.load_model = f"{args_copy.save_dir}/{agent_type}_best.pth"
-            args_copy.test_episodes = 10
+def inspect_model(args):
+    """Inspect a model file and show detailed information."""
+    if not args.load_model:
+        print("Error: --load-model is required for model inspection")
+        return
 
-            # Only test if model exists
-            if os.path.exists(args_copy.load_model):
-                test_agent(args_copy)
+    print(f"Inspecting model: {args.load_model}")
+    print("=" * 50)
 
-        except Exception as e:
-            print(f"Error training {agent_type}: {e}")
-            continue
+    model_info = get_model_info(args.load_model)
 
-    print(f"\n{'='*50}")
-    print("COMPARISON COMPLETED")
-    print("="*50)
+    if not model_info['exists']:
+        print(f"Error: Model file not found: {args.load_model}")
+        return
+
+    if 'error' in model_info:
+        print(f"Error loading model: {model_info['error']}")
+        return
+
+    print(f"File size: {model_info['file_size_mb']:.2f} MB")
+    print(f"Detected agent type: {model_info['agent_type'] or 'Unknown'}")
+    print(f"Model keys: {len(model_info['keys'])}")
+
+    print("\nModel structure:")
+    for key in model_info['keys']:
+        print(f"  - {key}")
+
+    if model_info['agent_type']:
+        print(f"\nUsage:")
+        print(f"  uv run python src/main.py --mode test --agent {model_info['agent_type']} --load-model {args.load_model}")
+        print(f"  # Or use auto-detection:")
+        print(f"  uv run python src/main.py --mode test --auto-detect --load-model {args.load_model}")
+    else:
+        print(f"\nWarning: Could not determine agent type. This may not be a valid model file.")
 
 
 def _add_arguments(parser):
@@ -249,6 +308,14 @@ def _add_arguments(parser):
     parser.add_argument('--demo', action='store_true',
                         help='Run demo with random agent')
 
+    # Auto-detection mode
+    parser.add_argument('--auto-detect', action='store_true',
+                        help='Automatically detect agent type from model file (test mode only)')
+
+    # Model inspection
+    parser.add_argument('--inspect-model', action='store_true',
+                        help='Inspect model file and show detailed information')
+
 
 def main():
     """Main function with argument parsing."""
@@ -275,7 +342,13 @@ def main():
         print("  uv run python src/main.py --agent dqn --episodes 500 --headless")
         print("")
         print("  # Test a trained model")
-        print("  uv run python src/main.py --mode test --agent dqn --load-model models/dqn_best.pth")
+        print("  uv run python src/main.py --mode test --agent dqn --load-model models/dqn_final.pth")
+        print("")
+        print("  # Test with auto-detection")
+        print("  uv run python src/main.py --mode test --auto-detect --load-model models/reinforce_final.pth")
+        print("")
+        print("  # Inspect a model file")
+        print("  uv run python src/main.py --inspect-model --load-model models/ppo_final.pth")
         print("")
         print("  # Run demo with random agent")
         print("  uv run python src/main.py --demo")
@@ -300,6 +373,10 @@ def main():
         # Import and run the existing demo
         from demo.visualization import demo_pygame_visualization
         demo_pygame_visualization()
+        return
+
+    if args.inspect_model:
+        inspect_model(args)
         return
 
     # Run normal mode

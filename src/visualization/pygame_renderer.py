@@ -142,7 +142,7 @@ class PyGameRenderer:
             f"Steps: {steps}",
             f"Total Reward: {total_reward:.1f}",
             "",
-            f"Epsilon: {epsilon:.3f}",
+            f"Epsilon: {epsilon:.3f}" if epsilon is not None else "Epsilon: N/A",
             f"FPS: {self.fps}",
             "",
             f"Grid Size: {self.grid_size}x{self.grid_size}",

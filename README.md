@@ -14,6 +14,7 @@ Implementation of Snake game environment with multiple Reinforcement Learning ag
 - **Real-time Visualization**: PyGame rendering during training
 - **Performance Tracking**: Live statistics and training metrics
 - **Algorithm Comparison**: Side-by-side performance analysis
+- **Smart Model Detection**: Automatic agent type detection from model files
 - **Modular Architecture**: Clean separation of environment, agents, and visualization
 
 ## Quick Start
@@ -55,14 +56,26 @@ uv run python src/main.py --agent dqn --episodes 1000 --headless
 
 ```bash
 # Test trained DQN agent
-uv run python src/main.py --agent dqn --mode test --load-model models/dqn_best.pth
+uv run python src/main.py --mode test --agent dqn --load-model models/dqn_final.pth
 
 # Test REINFORCE agent
-uv run python src/main.py --agent reinforce --mode test --load-model models/reinforce_best.pth
+uv run python src/main.py --mode test --agent reinforce --load-model models/reinforce_final.pth
+
+# Test PPO agent
+uv run python src/main.py --mode test --agent ppo --load-model models/ppo_final.pth
+
+# Automatic agent type detection (recommended)
+uv run python src/main.py --mode test --auto-detect --load-model models/04ppo_best.pth
+uv run python src/main.py --mode test --auto-detect --load-model models/05reinforce_best.pth
+
+# Inspect model file details
+uv run python src/main.py --inspect-model --load-model models/04ppo_best.pth
 
 # Run test suite
 uv run pytest tests/
 ```
+
+**Model Type Detection**: The system automatically detects agent type from model files based on their internal structure. Use `--auto-detect` for convenience or `--inspect-model` to see detailed model information including detected type, file size, and internal structure.
 
 ### Demo & Visualization
 
@@ -162,16 +175,18 @@ This design eliminates the common problem where DQN agents learn to "ping-pong" 
 
 ### Algorithm Comparison
 
-| Algorithm | Max Score | Avg Score (last 100) | Training Episodes | Implementation Status |
-|-----------|-----------|-------------------|------------------|---------------------|
-| DQN | ✅ Trained | ✅ Available | 1000 | ✅ **Complete** |
-| REINFORCE | - | - | - | 🔄 Architecture ready |
-| PPO | - | - | - | 🔄 Architecture ready |
+| Algorithm | Implementation | Training | Evaluation | Framework Integration |
+|-----------|----------------|----------|------------|---------------------|
+| **DQN** | ✅ Complete | ✅ Tested | ✅ Available | ✅ **Full Support** |
+| **REINFORCE** | ✅ Complete | ✅ Tested | ✅ Available | ✅ **Full Support** |
+| **PPO** | ✅ Complete | ✅ Tested | ✅ Available | ✅ **Full Support** |
 
-**DQN Status**: ✅ Fully trained and tested
-- Model saved: `models/dqn_final.pth`
+**All Agents Status**: ✅ Fully implemented and tested
+- All models can be saved/loaded: `models/{agent}_final.pth`
 - Interactive testing available with controls (pause, speed, screenshot)
 - Real-time visualization during training and testing
+- Comprehensive comparison framework with automated benchmarking
+- Unit tests verify all implementations (26 tests passing)
 
 ### Performance Metrics
 - **Learning Stability**: DQN vs Policy Gradient methods
@@ -215,7 +230,7 @@ snake-rl/
 │   ├── agent/          # Multi-algorithm RL agents (DQN, REINFORCE, PPO)
 │   ├── training/       # Universal trainer and comparison framework
 │   ├── visualization/  # PyGame rendering and statistics
-│   ├── utils/          # Configuration and utilities
+│   ├── utils/          # Configuration, model detection utilities
 │   └── main.py         # Training and testing script
 ├── demo/               # Demo scripts
 ├── tests/              # Unit tests

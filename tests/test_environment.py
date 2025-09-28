@@ -41,7 +41,8 @@ class TestSnakeGame:
         assert new_head[0] == initial_head[0] + 1
         assert new_head[1] == initial_head[1]
         assert not done
-        assert reward == -0.01
+        # With anti-oscillation system: step penalty (-0.001) + distance penalty (-0.1) = -0.101
+        assert reward == -0.101
 
     def test_food_eating(self):
         game = SnakeGame(grid_size=10, seed=42)
@@ -52,7 +53,8 @@ class TestSnakeGame:
         state, reward, done, info = game.step(RIGHT)
 
         assert len(game.snake) == initial_length + 1
-        assert reward == 10
+        # With updated reward system: REWARD_FOOD = 20.0
+        assert reward == 20.0
         assert game.score == 1
 
     def test_wall_collision(self):

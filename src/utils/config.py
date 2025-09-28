@@ -166,8 +166,8 @@ def get_agent_config(agent_type: str) -> Dict[str, Any]:
             'hidden_size': REINFORCEConfig.HIDDEN_SIZE,
             'learning_rate': REINFORCEConfig.LEARNING_RATE,
             'gamma': REINFORCEConfig.GAMMA,
-            'use_baseline': REINFORCEConfig.USE_BASELINE,
-            'baseline_learning_rate': REINFORCEConfig.BASELINE_LEARNING_RATE,
+            'baseline_weight': 0.5,  # Weight for baseline loss
+            'entropy_weight': 0.01,  # Entropy regularization
             'weight_decay': REINFORCEConfig.WEIGHT_DECAY
         },
         'ppo': {
@@ -175,13 +175,13 @@ def get_agent_config(agent_type: str) -> Dict[str, Any]:
             'learning_rate': PPOConfig.LEARNING_RATE,
             'gamma': PPOConfig.GAMMA,
             'gae_lambda': PPOConfig.GAE_LAMBDA,
-            'clip_ratio': PPOConfig.CLIP_RATIO,
-            'value_loss_coeff': PPOConfig.VALUE_LOSS_COEFF,
-            'entropy_coeff': PPOConfig.ENTROPY_COEFF,
+            'clip_epsilon': PPOConfig.CLIP_RATIO,
+            'value_weight': PPOConfig.VALUE_LOSS_COEFF,
+            'entropy_weight': PPOConfig.ENTROPY_COEFF,
             'ppo_epochs': PPOConfig.PPO_EPOCHS,
-            'mini_batch_size': PPOConfig.MINI_BATCH_SIZE,
+            'batch_size': PPOConfig.MINI_BATCH_SIZE,
             'max_grad_norm': PPOConfig.MAX_GRAD_NORM,
-            'rollout_length': PPOConfig.ROLLOUT_LENGTH
+            'buffer_size': 2048  # Experience buffer size
         }
     }
 
