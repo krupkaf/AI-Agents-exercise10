@@ -43,15 +43,16 @@ class PyGameRenderer:
         self.skip_episode = False  # Flag for episode skip request
 
     def render(self, game: SnakeGame, episode: int = 0, epsilon: float = 0.0,
-               total_reward: float = 0.0, steps: int = 0) -> None:
+               total_reward: float = 0.0, steps: int = 0, human_mode: bool = False) -> None:
         """Render the current game state.
 
         Args:
             game: SnakeGame instance
             episode: Current episode number
-            epsilon: Current epsilon value
-            total_reward: Total reward for current episode
-            steps: Steps taken in current episode
+            epsilon: Current epsilon value for exploration
+            total_reward: Total reward accumulated
+            steps: Number of steps taken
+            human_mode: Whether in human control mode
         """
         self.screen.fill(BACKGROUND)
 
@@ -63,7 +64,7 @@ class PyGameRenderer:
         self._draw_snake(game.get_snake_body())
 
         # Draw info panel
-        self._draw_info_panel(game, episode, epsilon, total_reward, steps)
+        self._draw_info_panel(game, episode, epsilon, total_reward, steps, human_mode)
 
         # Draw pause indicator if paused
         if self.paused:
@@ -114,7 +115,7 @@ class PyGameRenderer:
         pygame.draw.rect(self.screen, FOOD_COLOR, rect)
 
     def _draw_info_panel(self, game: SnakeGame, episode: int, epsilon: float,
-                        total_reward: float, steps: int) -> None:
+                        total_reward: float, steps: int, human_mode: bool = False) -> None:
         """Draw the information panel.
 
         Args:
@@ -136,24 +137,43 @@ class PyGameRenderer:
         line_height = 30
 
         # Game info
-        info_lines = [
-            f"Episode: {episode}",
-            f"Score: {game.get_score()}",
-            f"Steps: {steps}",
-            f"Total Reward: {total_reward:.1f}",
-            "",
-            f"Epsilon: {epsilon:.3f}" if epsilon is not None else "Epsilon: N/A",
-            f"FPS: {self.fps}",
-            "",
-            f"Grid Size: {self.grid_size}x{self.grid_size}",
-            f"Snake Length: {len(game.get_snake_body())}",
-            "",
-            "Controls:",
-            "SPACE - Pause/Resume",
-            "UP/DOWN - Speed",
-            "S - Screenshot",
-            "Q - Quit"
-        ]
+        if human_mode:
+            info_lines = [
+                f"Episode: {episode}",
+                f"Score: {game.get_score()}",
+                f"Steps: {steps}",
+                f"Reward: {total_reward:.1f}",
+                "",
+                "*** HUMAN ***",
+                f"Speed: {self.fps}",
+                f"Length: {len(game.get_snake_body())}",
+                "",
+                "Arrow Keys - Move",
+                "SPACE - Pause",
+                "+/- - Speed",
+                "S - Screenshot",
+                "ESC - Skip",
+                "Q - Quit"
+            ]
+        else:
+            info_lines = [
+                f"Episode: {episode}",
+                f"Score: {game.get_score()}",
+                f"Steps: {steps}",
+                f"Total Reward: {total_reward:.1f}",
+                "",
+                f"Epsilon: {epsilon:.3f}" if epsilon is not None else "Epsilon: N/A",
+                f"FPS: {self.fps}",
+                "",
+                f"Grid Size: {self.grid_size}x{self.grid_size}",
+                f"Snake Length: {len(game.get_snake_body())}",
+                "",
+                "Controls:",
+                "SPACE - Pause/Resume",
+                "UP/DOWN - Speed",
+                "S - Screenshot",
+                "Q - Quit"
+            ]
 
         for i, line in enumerate(info_lines):
             if line:  # Skip empty lines
@@ -171,8 +191,11 @@ class PyGameRenderer:
         text_rect = pause_text.get_rect(center=(self.game_area_width // 2, self.game_area_height // 2))
         self.screen.blit(pause_text, text_rect)
 
-    def handle_events(self) -> bool:
+    def handle_events(self, human_agent=None) -> bool:
         """Handle PyGame events.
+
+        Args:
+            human_agent: Optional HumanAgent instance to forward keydown events
 
         Returns:
             False if quit event received, True otherwise
@@ -182,14 +205,35 @@ class PyGameRenderer:
                 return False
 
             elif event.type == pygame.KEYDOWN:
+                # Forward movement keys to human agent if provided
+                if human_agent is not None and event.key in [
+                    pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT
+                ]:
+                    human_agent.handle_keydown_event(event)
+
+                # Handle control keys
                 if event.key == pygame.K_q:
                     return False
                 elif event.key == pygame.K_SPACE:
                     self.paused = not self.paused
-                elif event.key == pygame.K_UP:
+                elif event.key == pygame.K_UP and human_agent is None:
+                    # Only adjust FPS if not human control mode
                     self.fps = self.fps + 5
-                elif event.key == pygame.K_DOWN:
+                elif event.key == pygame.K_DOWN and human_agent is None:
+                    # Only adjust FPS if not human control mode
                     self.fps = max(1, self.fps - 5)
+                elif event.key == pygame.K_PLUS or event.key == pygame.K_EQUALS:
+                    # Speed up with + key (human mode compatible)
+                    if self.fps < 5:
+                        self.fps = min(50, self.fps + 1)  # Step by 1 for low speeds
+                    else:
+                        self.fps = min(50, self.fps + 5)  # Step by 5 for higher speeds
+                elif event.key == pygame.K_MINUS:
+                    # Slow down with - key (human mode compatible)
+                    if self.fps <= 5:
+                        self.fps = max(1, self.fps - 1)  # Step by 1 for low speeds
+                    else:
+                        self.fps = max(1, self.fps - 5)  # Step by 5 for higher speeds
                 elif event.key == pygame.K_s:
                     self._save_screenshot()
                 elif event.key == pygame.K_ESCAPE:

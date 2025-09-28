@@ -237,6 +237,9 @@ uv run python -m pytest tests/ -v
 
 # Run demo
 uv run python src/main.py --demo
+
+# Play Snake manually with arrow keys (human control)
+uv run python src/main.py --mode human --episodes 5
 ```
 
 ## Quality Standards

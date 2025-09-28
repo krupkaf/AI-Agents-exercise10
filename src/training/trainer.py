@@ -478,3 +478,91 @@ class UniversalTrainer:
             print(f"Training plot saved: {save_path}")
 
         plt.show()
+
+    def run_human_control(self, num_episodes: int = 5) -> None:
+        """
+        Run human-controlled episodes for manual Snake gameplay.
+
+        Args:
+            num_episodes: Number of episodes to run
+        """
+        from src.agent.human_agent import HumanAgent
+
+        if not isinstance(self.agent, HumanAgent):
+            print("Error: This method requires a HumanAgent")
+            return
+
+        if not self.enable_rendering:
+            print("Error: Human control requires visualization enabled")
+            return
+
+        print(f"\nStarting {num_episodes} human-controlled episodes")
+        print("Controls: Arrow Keys = Move, SPACE = Pause, +/- = Speed, S = Screenshot, ESC = Skip, Q = Quit")
+
+        for episode in range(1, num_episodes + 1):
+            print(f"\n--- Episode {episode}/{num_episodes} ---")
+
+            state, _ = self.env.reset()
+            total_reward = 0
+            steps = 0
+            done = False
+
+            while not done:
+                # Handle events (including human input)
+                if not self.renderer.handle_events(self.agent):
+                    print("Quit requested")
+                    return
+
+                # Skip episode if requested
+                if self.renderer.skip_episode:
+                    print("Episode skipped")
+                    self.renderer.skip_episode = False
+                    break
+
+                # Pause handling
+                if self.renderer.paused:
+                    # Update display even when paused
+                    self.renderer.render(
+                        game=self.env.unwrapped.game,
+                        episode=episode,
+                        epsilon=None,
+                        total_reward=total_reward,
+                        steps=steps,
+                        human_mode=True
+                    )
+                    continue
+
+                # Get human action
+                action = self.agent.get_action(state)
+
+                # Take step
+                next_state, reward, terminated, truncated, info = self.env.step(action)
+                done = terminated or truncated
+
+                total_reward += reward
+                steps += 1
+                state = next_state
+
+                # Render current state
+                self.renderer.render(
+                    game=self.env.unwrapped.game,
+                    episode=episode,
+                    epsilon=None,
+                    total_reward=total_reward,
+                    steps=steps,
+                    human_mode=True
+                )
+
+                # Add small delay to prevent excessive speed
+                time.sleep(0.05)
+
+            # Episode finished
+            score = self.env.unwrapped.game.get_score()
+            print(f"Episode {episode} finished: Score = {score}, Steps = {steps}, Reward = {total_reward:.1f}")
+
+        print(f"\nHuman control session completed! Played {num_episodes} episodes.")
+
+        # Cleanup pygame
+        if self.renderer:
+            import pygame
+            pygame.quit()

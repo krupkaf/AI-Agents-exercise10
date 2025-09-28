@@ -18,6 +18,7 @@ from src.environment.snake_env import SnakeEnv
 from src.agent.dqn_agent import DQNAgent
 from src.agent.reinforce_agent import REINFORCEAgent
 from src.agent.ppo_agent import PPOAgent
+from src.agent.human_agent import HumanAgent
 from src.training.trainer import UniversalTrainer
 from src.training.comparison import AgentComparison
 from src.utils.config import (
@@ -39,7 +40,7 @@ def create_agent(agent_type: str, state_dim: int, action_dim: int, device: torch
     Create an agent of the specified type.
 
     Args:
-        agent_type: Type of agent ('dqn', 'reinforce', 'ppo')
+        agent_type: Type of agent ('dqn', 'reinforce', 'ppo', 'human')
         state_dim: Dimension of state space
         action_dim: Number of actions
         device: PyTorch device
@@ -47,6 +48,9 @@ def create_agent(agent_type: str, state_dim: int, action_dim: int, device: torch
     Returns:
         Initialized agent
     """
+    if agent_type == 'human':
+        return HumanAgent()
+
     config = get_agent_config(agent_type)
 
     if agent_type == 'dqn':
@@ -199,6 +203,34 @@ def test_agent(args):
         print(f"{key:15s}: {value:8.2f}")
 
 
+def human_control(args):
+    """Start human-controlled Snake game."""
+    print("Starting human-controlled Snake game...")
+    print("Use Arrow keys to control the snake")
+    print("SPACE - Pause/Resume, +/- - Speed, S - Screenshot, ESC - Skip Episode, Q - Quit")
+
+    # Create environment
+    env = SnakeEnv(
+        grid_size=EnvironmentConfig.GRID_SIZE,
+        max_steps=EnvironmentConfig.MAX_STEPS
+    )
+
+    # Create human agent
+    agent = HumanAgent()
+
+    # Create trainer for visualization
+    trainer = UniversalTrainer(
+        agent=agent,
+        env=env,
+        agent_name="human",
+        enable_rendering=True,
+        save_dir=args.save_dir
+    )
+
+    # Run human control with special flag
+    trainer.run_human_control(args.episodes)
+
+
 def compare_agents(args):
     """Compare multiple agents using the AgentComparison framework."""
     print("Starting comprehensive agent comparison...")
@@ -271,8 +303,8 @@ def inspect_model(args):
 def _add_arguments(parser):
     """Add all command line arguments to the parser."""
     # Mode selection
-    parser.add_argument('--mode', choices=['train', 'test'], default='train',
-                        help='Mode to run (train or test)')
+    parser.add_argument('--mode', choices=['train', 'test', 'human'], default='train',
+                        help='Mode to run (train, test, or human)')
 
     # Agent selection
     parser.add_argument('--agent', choices=['dqn', 'reinforce', 'ppo'], default='dqn',
@@ -353,6 +385,9 @@ def main():
         print("  # Run demo with random agent")
         print("  uv run python src/main.py --demo")
         print("")
+        print("  # Play Snake manually with arrow keys (human control)")
+        print("  uv run python src/main.py --mode human")
+        print("")
         return
 
     parser = argparse.ArgumentParser(description='Snake RL Training and Testing')
@@ -384,6 +419,8 @@ def main():
         train_agent(args)
     elif args.mode == 'test':
         test_agent(args)
+    elif args.mode == 'human':
+        human_control(args)
     else:
         parser.print_help()
 

@@ -83,12 +83,32 @@ uv run pytest tests/
 # Run interactive demo with random agent
 uv run python demo/visualization.py
 
+# Play Snake manually with arrow keys
+uv run python src/main.py --mode human --episodes 5
+
 # Interactive controls during training/testing:
 # SPACE - Pause/Resume
 # UP/DOWN - Adjust speed
 # S - Screenshot
 # ESC - Skip current episode
 # Q - Quit
+```
+
+### Human Control Mode
+
+Play Snake manually using arrow keys:
+
+```bash
+# Play 5 episodes manually
+uv run python src/main.py --mode human --episodes 5
+
+# Controls:
+# Arrow Keys - Move snake
+# SPACE - Pause/Resume
+# +/- - Adjust speed
+# S - Screenshot
+# ESC - Skip current episode
+# Q - Quit game
 ```
 
 ## Architecture
