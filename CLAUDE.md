@@ -1,7 +1,7 @@
 # Snake Reinforcement Learning Project
 
 ## Project Overview
-Implementation of Snake game environment with Deep Q-Network (DQN) agent for AI Agents course (Lesson 10).
+Implementation of Snake game environment with multiple Reinforcement Learning agents (DQN, REINFORCE, PPO) for AI Agents course (Lesson 10).
 
 ## Communication & Language
 - **Code & Documentation**: English (except original Czech assignment)
@@ -28,9 +28,16 @@ snake-rl/
 │   │   └── game_logic.py         # Core Snake game mechanics
 │   ├── agent/
 │   │   ├── __init__.py
-│   │   ├── dqn_agent.py          # Main DQN agent implementation
-│   │   ├── neural_network.py     # PyTorch neural network
-│   │   └── replay_buffer.py      # Experience replay buffer
+│   │   ├── base_agent.py         # Abstract base class for all agents
+│   │   ├── dqn_agent.py          # DQN agent implementation
+│   │   ├── reinforce_agent.py    # REINFORCE agent implementation
+│   │   ├── ppo_agent.py          # PPO agent implementation (optional)
+│   │   ├── neural_networks.py    # Shared PyTorch network architectures
+│   │   └── replay_buffer.py      # Experience replay utilities
+│   ├── training/
+│   │   ├── __init__.py
+│   │   ├── trainer.py            # Universal trainer for all agents
+│   │   └── comparison.py         # Multi-agent comparison framework
 │   ├── visualization/
 │   │   ├── __init__.py
 │   │   ├── pygame_renderer.py    # Real-time PyGame visualization
@@ -63,9 +70,9 @@ snake-rl/
 1. **Setup**: Environment and dependencies
 2. **Environment**: Implement Snake game with Gymnasium interface
 3. **Visualization**: PyGame real-time rendering
-4. **Agent**: DQN implementation with experience replay
+4. **Agents**: Multi-algorithm RL implementation (DQN primary, REINFORCE/PPO optional)
 5. **Training**: Integration and hyperparameter tuning
-6. **Evaluation**: Performance testing and documentation
+6. **Evaluation**: Performance testing and algorithm comparison
 7. **Submission**: GitHub repository preparation
 
 ## Implementation Phases
@@ -100,12 +107,20 @@ snake-rl/
 - ✅ Integration with training loop - `demo/visualization.py` (demo with random agent) tested
 - ✅ StatsTracker utility class - `src/visualization/stats_display.py` (ready for DQN training)
 
-### Phase 5: DQN Agent (90 min)
-- Neural network architecture (Conv2D → Dense)
-- Experience replay buffer (configurable size)
-- Target network + epsilon-greedy exploration
-- Save/load model functionality
-- Hyperparameter configuration
+### Phase 5: DQN Agent Implementation (90 min) ✅ COMPLETED ✅ VERIFIED
+- ✅ Base agent abstract class for extensibility - `src/agent/base_agent.py` with abstract methods
+- ✅ Neural network architecture (Conv2D → Dense for grid processing) - `src/agent/neural_networks.py` DQNNetwork
+- ✅ Experience replay buffer (configurable size) - `src/agent/replay_buffer.py` with 10k default size
+- ✅ Target network + epsilon-greedy exploration - DQNAgent with target update freq 100, ε: 1.0→0.01
+- ✅ Save/load model functionality - `save_model()` and `load_model()` methods implemented
+- ✅ Hyperparameter configuration system - `src/utils/config.py` comprehensive config classes
+
+### Phase 5b: Additional RL Algorithms (60-90 min, optional)
+- REINFORCE agent implementation (policy gradient baseline)
+- PPO agent implementation (advanced policy gradient, if time permits)
+- Universal trainer supporting all agent types
+- Performance comparison framework and visualization
+- Multi-agent benchmarking and results analysis
 
 ### Phase 6: Training & Integration (60 min)
 - Training loop with PyGame real-time display
@@ -152,12 +167,26 @@ snake-rl/
   - -10 for collision/death
   - -0.01 for each step (efficiency incentive)
 
-### DQN Agent Features
-- **Neural Network**: Convolutional + Dense layers
+### Implemented Algorithms
+
+#### 1. DQN (Deep Q-Network) - Primary Implementation
+- **Neural Network**: Convolutional + Dense layers for grid processing
 - **Experience Replay**: Configurable buffer size (default: 10,000)
 - **Target Network**: Updated every N steps for stability
 - **Exploration**: Epsilon-greedy strategy (1.0 → 0.01)
 - **Optimization**: Adam optimizer with learning rate scheduling
+
+#### 2. REINFORCE - Policy Gradient Baseline (Optional)
+- **Policy Network**: Direct action probability output
+- **Monte Carlo**: Full episode rollouts for gradient estimation
+- **Baseline**: Value function for variance reduction
+- **Exploration**: Stochastic policy sampling
+
+#### 3. PPO - Advanced Policy Gradient (Optional)
+- **Actor-Critic**: Separate policy and value networks
+- **Clipped Objective**: Proximal policy optimization constraint
+- **GAE**: Generalized Advantage Estimation
+- **Multiple Epochs**: Efficient sample reuse
 
 ### Visualization Features
 - **Real-time rendering**: 800x600 PyGame window
@@ -185,7 +214,10 @@ uv add --dev pytest black flake8 isort
 uv run python demo/visualization.py
 
 # Run project (when implemented)
-uv run python src/main.py --mode train --episodes 1000
+uv run python src/main.py --agent dqn --episodes 1000
+uv run python src/main.py --agent reinforce --episodes 500
+uv run python src/main.py --agent ppo --episodes 1000
+uv run python src/main.py --compare-all --episodes 500
 ```
 
 ## Quality Standards
@@ -197,7 +229,7 @@ uv run python src/main.py --mode train --episodes 1000
 
 ## Success Criteria
 1. **Functional Environment**: Snake game following Gymnasium interface
-2. **Working Agent**: DQN successfully learning to play
+2. **Working Agents**: DQN successfully learning to play (+ optional comparison algorithms)
 3. **Real-time Visualization**: PyGame rendering during training
 4. **Performance**: Agent achieving reasonable scores
 5. **Documentation**: Complete README with usage examples
