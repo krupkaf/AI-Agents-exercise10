@@ -2,7 +2,7 @@ import random
 import numpy as np
 from typing import List, Tuple, Optional
 
-from .constants import UP, RIGHT, DOWN, LEFT, EMPTY, SNAKE_BODY, SNAKE_HEAD, FOOD, REWARD_FOOD, REWARD_DEATH, REWARD_STEP
+from .constants import UP, RIGHT, DOWN, LEFT, EMPTY, SNAKE_BODY, SNAKE_HEAD, FOOD, REWARD_FOOD, REWARD_DEATH, REWARD_STEP, REWARD_REVISIT, REWARD_OSCILLATE
 
 
 class SnakeGame:
@@ -44,6 +44,10 @@ class SnakeGame:
         self.steps = 0
         self.game_over = False
 
+        # Track visited positions for anti-oscillation rewards
+        self.visited_positions = set()  # All positions ever visited
+        self.position_history = []      # Last few positions for oscillation detection
+
         return self.get_state()
 
     def _create_initial_snake(self) -> List[Tuple[int, int]]:
@@ -83,7 +87,7 @@ class SnakeGame:
 
         Returns:
             observation: Current game state as grid array
-            reward: Reward for this step (food=+10, death=-10, step=-0.01)
+            reward: Reward for this step (food=+20, death=-10, step=-0.001, revisit=-1, oscillate=-3)
             done: True if game ended (collision occurred)
             info: Dictionary with game statistics
         """
@@ -111,7 +115,14 @@ class SnakeGame:
             reward = REWARD_DEATH
             return self.get_state(), reward, True, {"score": self.score}
 
+        # Apply position-based penalties before moving
+        position_penalty = self._calculate_position_penalty(new_head)
+        reward += position_penalty
+
         self.snake.insert(0, new_head)
+
+        # Update position tracking
+        self._update_position_tracking(new_head)
 
         if new_head == self.food:
             self.score += 1
@@ -230,3 +241,38 @@ class SnakeGame:
             Total steps since last reset
         """
         return self.steps
+
+    def _calculate_position_penalty(self, new_head: Tuple[int, int]) -> float:
+        """Calculate penalty for visiting specific positions.
+
+        Args:
+            new_head: New head position to evaluate
+
+        Returns:
+            Penalty value (negative float)
+        """
+        penalty = 0.0
+
+        # Check if returning to previously visited position
+        if new_head in self.visited_positions:
+            penalty += REWARD_REVISIT  # -1.0
+
+        # Check if oscillating (returning to position from 2 steps ago)
+        if len(self.position_history) >= 2 and new_head == self.position_history[-2]:
+            penalty += REWARD_OSCILLATE  # -3.0
+
+        return penalty
+
+    def _update_position_tracking(self, new_head: Tuple[int, int]) -> None:
+        """Update position tracking for penalty calculations.
+
+        Args:
+            new_head: New head position that was just moved to
+        """
+        # Add to visited positions set
+        self.visited_positions.add(new_head)
+
+        # Add to position history and keep only last 3 positions
+        self.position_history.append(new_head)
+        if len(self.position_history) > 3:
+            self.position_history.pop(0)

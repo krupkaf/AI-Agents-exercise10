@@ -74,7 +74,7 @@ uv run pytest tests/
 - **Snake Growth**: Initial length 1 segment, grows by 1 segment per food eaten
 - **Episode Limit**: 1000 steps maximum (configurable in SnakeEnv)
 - **Termination**: `terminated` (collision) vs `truncated` (time limit)
-- **Reward System**: +10 food, -10 death, -0.01 step
+- **Reward System**: +20 food, -10 death, -0.001 step, -1 revisit, -3 oscillate (anti-stuck design)
 
 ### Agents (`src/agent/`)
 
@@ -121,6 +121,25 @@ EPSILON_DECAY = 0.995
 HIDDEN_SIZE = 512
 TARGET_UPDATE_FREQ = 100
 ```
+
+## Anti-Oscillation Reward Design
+
+The reward system is specifically designed to prevent the snake from getting stuck in safe positions and encourage active food exploration:
+
+**Positive Rewards:**
+- `+20.0` for eating food (doubled from original +10 to encourage active seeking)
+
+**Minimal Exploration Penalty:**
+- `-0.001` per step (reduced from -0.01 to allow longer exploration without heavy penalty)
+
+**Anti-Stuck Penalties:**
+- `-1.0` for returning to any previously visited position
+- `-3.0` for oscillating between two positions (returning to position from 2 steps ago)
+
+**Game Over Penalty:**
+- `-10.0` for collision/death
+
+This design eliminates the common problem where DQN agents learn to "ping-pong" between safe positions indefinitely, instead forcing them to actively explore and seek food.
 
 ## Results
 

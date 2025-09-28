@@ -162,10 +162,12 @@ snake-rl/
 - **Episode Termination**:
   - `terminated=True`: Collision occurred (snake died)
   - `truncated=True`: Time limit reached (1000 steps)
-- **Reward System**:
-  - +10 for eating food
+- **Reward System** (Anti-Oscillation Design):
+  - +20 for eating food (increased to encourage active seeking)
   - -10 for collision/death
-  - -0.01 for each step (efficiency incentive)
+  - -0.001 for each step (minimal exploration penalty)
+  - -1.0 for returning to previously visited position
+  - -3.0 for oscillating (returning to position from 2 steps ago)
 
 ### Implemented Algorithms
 

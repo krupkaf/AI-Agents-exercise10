@@ -13,6 +13,8 @@ SNAKE_HEAD = 2
 FOOD = 3
 
 # Reward values (float for precise calculations)
-REWARD_FOOD = 10.0
+REWARD_FOOD = 20.0          # Increased from 10.0 to encourage active food seeking
 REWARD_DEATH = -10.0
-REWARD_STEP = -0.01
+REWARD_STEP = -0.001
+REWARD_REVISIT = -1.0       # Penalty for returning to previously visited position
+REWARD_OSCILLATE = -3.0     # Heavy penalty for returning to position from 2 steps ago

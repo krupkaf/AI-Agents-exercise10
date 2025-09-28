@@ -93,7 +93,7 @@ class SnakeEnv(gym.Env):
 
         Returns:
             observation: New game state as grid array
-            reward: Reward for this step (+10 food, -10 death, -0.01 step)
+            reward: Reward for this step (+20 food, -10 death, -0.001 step, -1 revisit, -3 oscillate)
             terminated: True if game ended (collision/death)
             truncated: True if max steps reached
             info: Dictionary with game statistics
