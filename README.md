@@ -14,7 +14,7 @@ Implementation of Snake game environment with multiple Reinforcement Learning ag
 - **Real-time Visualization**: PyGame rendering during training
 - **Performance Tracking**: Live statistics and training metrics
 - **Algorithm Comparison**: Side-by-side performance analysis
-- **Smart Model Detection**: Automatic agent type detection from model files
+- **Smart Model Detection**: Automatic agent type and grid size detection from model files
 - **Modular Architecture**: Clean separation of environment, agents, and visualization
 
 ## Quick Start
@@ -68,14 +68,14 @@ uv run python src/main.py --mode test --agent ppo --load-model models/ppo_final.
 uv run python src/main.py --mode test --auto-detect --load-model models/04ppo_best.pth
 uv run python src/main.py --mode test --auto-detect --load-model models/05reinforce_best.pth
 
-# Inspect model file details
+# Inspect model file details (shows agent type, grid size, file structure)
 uv run python src/main.py --inspect-model --load-model models/04ppo_best.pth
 
 # Run test suite
 uv run pytest tests/
 ```
 
-**Model Type Detection**: The system automatically detects agent type from model files based on their internal structure. Use `--auto-detect` for convenience or `--inspect-model` to see detailed model information including detected type, file size, and internal structure.
+**Smart Model Detection**: The system automatically detects both agent type and grid size from model files based on their internal structure. This prevents compatibility issues when testing models trained on different grid sizes. Use `--auto-detect` for convenience or `--inspect-model` to see detailed model information including detected type, grid size, file size, and internal structure.
 
 ### Demo & Visualization
 
@@ -116,12 +116,13 @@ uv run python src/main.py --mode human --episodes 5
 ### Environment (`src/environment/`)
 - **Snake Game Logic**: Core mechanics (movement, collision, food spawning)
 - **Gymnasium Interface**: Standard RL environment API
-- **State Representation**: 20x20 grid or feature vector
+- **State Representation**: Configurable grid size (default 20x20) or feature vector
 - **Food System**: Single food item, immediate respawn at random empty position
 - **Snake Growth**: Initial length 1 segment, grows by 1 segment per food eaten
 - **Episode Limit**: 1000 steps maximum (configurable in SnakeEnv)
 - **Termination**: `terminated` (collision) vs `truncated` (time limit)
 - **Reward System**: Multi-component anti-stuck design (see constants.py for values)
+- **Grid Size Auto-Detection**: Models automatically detect and use correct grid size during testing
 
 ### Agents (`src/agent/`)
 
@@ -203,6 +204,7 @@ This design eliminates the common problem where DQN agents learn to "ping-pong" 
 
 **All Agents Status**: ✅ Fully implemented and tested
 - All models can be saved/loaded: `models/{agent}_final.pth`
+- Smart model detection: automatic agent type and grid size detection
 - Interactive testing available with controls (pause, speed, screenshot)
 - Real-time visualization during training and testing
 - Comprehensive comparison framework with automated benchmarking
@@ -250,7 +252,7 @@ snake-rl/
 │   ├── agent/          # Multi-algorithm RL agents (DQN, REINFORCE, PPO)
 │   ├── training/       # Universal trainer and comparison framework
 │   ├── visualization/  # PyGame rendering and statistics
-│   ├── utils/          # Configuration, model detection utilities
+│   ├── utils/          # Configuration, smart model detection utilities
 │   └── main.py         # Training and testing script
 ├── demo/               # Demo scripts
 ├── tests/              # Unit tests

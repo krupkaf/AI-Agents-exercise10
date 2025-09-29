@@ -23,6 +23,7 @@ class SnakeEnv(gym.Env):
         grid_size: int = 20,
         max_steps: int = 1000,
         render_mode: Optional[str] = None,
+        agent_type: str = "dqn",
     ):
         """Initialize Snake environment.
 
@@ -32,12 +33,14 @@ class SnakeEnv(gym.Env):
             render_mode: Rendering mode string as required by Gymnasium standard:
                 - "rgb_array": Returns RGB image array when render() is called
                 - None: No rendering, render() returns None (headless mode)
+            agent_type: Type of agent ("dqn", "ppo", "reinforce") for reward tuning
         """
         super().__init__()
 
         self.grid_size = grid_size
         self.max_steps = max_steps
         self.render_mode = render_mode
+        self.agent_type = agent_type
 
         # Define action space: 4 discrete actions (UP=0, RIGHT=1, DOWN=2, LEFT=3)
         self.action_space = spaces.Discrete(4)
@@ -53,7 +56,7 @@ class SnakeEnv(gym.Env):
             dtype=np.int32  # Integer values for categorical data
         )
 
-        self.game = SnakeGame(grid_size=grid_size)
+        self.game = SnakeGame(grid_size=grid_size, agent_type=agent_type)
         self.current_step = 0
 
     def reset(

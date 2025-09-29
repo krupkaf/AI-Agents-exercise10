@@ -315,3 +315,13 @@ class DQNAgent(BaseAgent):
     def get_buffer_statistics(self) -> Dict[str, Any]:
         """Get replay buffer statistics."""
         return self.replay_buffer.get_statistics()
+
+    def get_model_state(self) -> Dict[str, Any]:
+        """Get the current model state dictionary for transfer learning."""
+        return self.q_network.state_dict()
+
+    def load_model_state(self, state_dict: Dict[str, Any]) -> None:
+        """Load model state from dictionary for transfer learning."""
+        self.q_network.load_state_dict(state_dict, strict=False)
+        # Update target network to match
+        self.target_network.load_state_dict(self.q_network.state_dict())

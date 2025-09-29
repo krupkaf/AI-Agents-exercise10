@@ -97,6 +97,26 @@ class BaseAgent(ABC):
         """
         pass
 
+    @abstractmethod
+    def get_model_state(self) -> Dict[str, Any]:
+        """
+        Get the current model state dictionary.
+
+        Returns:
+            Model state dictionary for transfer learning
+        """
+        pass
+
+    @abstractmethod
+    def load_model_state(self, state_dict: Dict[str, Any]) -> None:
+        """
+        Load model state from dictionary.
+
+        Args:
+            state_dict: Model state dictionary
+        """
+        pass
+
     def reset_episode(self) -> None:
         """Reset any episode-specific state."""
         self.episode_count += 1

@@ -41,8 +41,8 @@ class TestSnakeGame:
         assert new_head[0] == initial_head[0] + 1
         assert new_head[1] == initial_head[1]
         assert not done
-        # With anti-oscillation system: step penalty (-0.001) + distance penalty (-0.1) = -0.101
-        assert reward == -0.101
+        # With new survival-first system: survival bonus (+0.1) + new cell bonus (+0.5) + distance penalty (-0.3) = 0.3
+        assert reward == 0.3
 
     def test_food_eating(self):
         game = SnakeGame(grid_size=10, seed=42)
@@ -53,8 +53,8 @@ class TestSnakeGame:
         state, reward, done, info = game.step(RIGHT)
 
         assert len(game.snake) == initial_length + 1
-        # With updated reward system: REWARD_FOOD = 20.0
-        assert reward == 20.0
+        # With new progressive reward system: REWARD_FOOD_BASE + (score * FOOD_SCORE_MULTIPLIER) = 100.0 + (1 * 10.0) = 110.0
+        assert reward == 110.0
         assert game.score == 1
 
     def test_wall_collision(self):
@@ -64,7 +64,7 @@ class TestSnakeGame:
         state, reward, done, info = game.step(LEFT)
 
         assert done
-        assert reward == -10
+        assert reward == -200.0  # New REWARD_DEATH_BASE for quick death
         assert game.game_over
 
     def test_self_collision(self):
@@ -74,7 +74,7 @@ class TestSnakeGame:
         state, reward, done, info = game.step(LEFT)
 
         assert done
-        assert reward == -10
+        assert reward == -200.0  # New REWARD_DEATH_BASE for quick death
         assert game.game_over
 
     def test_state_representation(self):

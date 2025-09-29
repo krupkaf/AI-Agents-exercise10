@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 import torch
 import numpy as np
+from typing import Optional
 
 # Add project root to path for imports
 sys.path.append(str(Path(__file__).parent.parent))
@@ -29,13 +30,14 @@ from src.utils.config import (
 )
 from src.utils.model_utils import (
     detect_model_type,
+    detect_grid_size,
     validate_model_agent_compatibility,
     suggest_correct_agent_type,
     get_model_info
 )
 
 
-def create_agent(agent_type: str, state_dim: int, action_dim: int, device: torch.device):
+def create_agent(agent_type: str, state_dim: int, action_dim: int, device: torch.device, grid_size: Optional[int] = None):
     """
     Create an agent of the specified type.
 
@@ -44,6 +46,7 @@ def create_agent(agent_type: str, state_dim: int, action_dim: int, device: torch
         state_dim: Dimension of state space
         action_dim: Number of actions
         device: PyTorch device
+        grid_size: Grid size (optional, for verification purposes)
 
     Returns:
         Initialized agent
@@ -63,6 +66,66 @@ def create_agent(agent_type: str, state_dim: int, action_dim: int, device: torch
         raise ValueError(f"Unknown agent type: {agent_type}")
 
 
+def adaptive_train_agent(args):
+    """Train agent using adaptive grid size (grows during training)."""
+    from src.training.adaptive_trainer import AdaptiveGridTrainer
+
+    print(f"Adaptive training {args.agent.upper()} agent...")
+    print(f"Grid size: 5x5 → automatically grows based on performance")
+    print(f"Headless mode: {args.headless}")
+
+    # Get device
+    device = get_device()
+
+    # Create adaptive trainer
+    adaptive_trainer = AdaptiveGridTrainer(
+        agent_type=args.agent,
+        device=device,
+        enable_rendering=not args.headless,
+        save_dir=args.save_dir + "/adaptive"
+    )
+
+    # Run adaptive training
+    summary = adaptive_trainer.train_adaptive(
+        total_episodes=args.episodes,
+        episodes_per_check=50,
+        min_episodes_per_size=100
+    )
+
+    print(f"\\n🎯 Adaptive training completed!")
+    print(f"Final grid size: {summary['final_grid_size']}x{summary['final_grid_size']}")
+    print(f"Grid transitions: {len(summary['grid_transitions'])}")
+    print(f"Final model: {summary['final_model_path']}")
+    return summary
+
+
+def curriculum_train_agent(args):
+    """Train agent using curriculum learning (small to large grids)."""
+    from src.training.curriculum_trainer import CurriculumTrainer
+
+    print(f"Curriculum training {args.agent.upper()} agent...")
+    print(f"Stages: 5x5 → 8x8 → 12x12 → 16x16 → 20x20")
+    print(f"Headless mode: {args.headless}")
+
+    # Get device
+    device = get_device()
+
+    # Create curriculum trainer
+    curriculum_trainer = CurriculumTrainer(
+        agent_type=args.agent,
+        device=device,
+        enable_rendering=not args.headless,
+        save_dir=args.save_dir + "/curriculum"
+    )
+
+    # Run curriculum training
+    summary = curriculum_trainer.train_curriculum()
+
+    print(f"\\n🎓 Curriculum training completed!")
+    print(f"Final model: {summary['final_model_path']}")
+    return summary
+
+
 def train_agent(args):
     """Train an agent."""
     print(f"Training {args.agent.upper()} agent...")
@@ -74,8 +137,9 @@ def train_agent(args):
 
     # Create environment
     env = SnakeEnv(
-        grid_size=EnvironmentConfig.GRID_SIZE,
-        max_steps=EnvironmentConfig.MAX_STEPS
+        grid_size=args.grid_size,
+        max_steps=EnvironmentConfig.MAX_STEPS,
+        agent_type=args.agent
     )
 
     # Get dimensions
@@ -148,7 +212,20 @@ def test_agent(args):
         args.agent = detected_type
         print(f"Auto-detected agent type: {detected_type}")
 
+    # Auto-detect grid size from model
+    detected_grid_size = detect_grid_size(args.load_model)
+    if detected_grid_size is not None:
+        if args.grid_size != detected_grid_size:
+            print(f"Grid size mismatch detected!")
+            print(f"  Command line grid size: {args.grid_size}")
+            print(f"  Model grid size: {detected_grid_size}")
+            print(f"  Using model grid size: {detected_grid_size}")
+        args.grid_size = detected_grid_size
+    else:
+        print(f"Warning: Could not auto-detect grid size from model, using: {args.grid_size}")
+
     print(f"Testing {args.agent.upper()} agent...")
+    print(f"Grid size: {args.grid_size}x{args.grid_size}")
 
     # Detect model type and check compatibility
     detected_type = detect_model_type(args.load_model)
@@ -169,8 +246,9 @@ def test_agent(args):
 
     # Create environment
     env = SnakeEnv(
-        grid_size=EnvironmentConfig.GRID_SIZE,
-        max_steps=EnvironmentConfig.MAX_STEPS
+        grid_size=args.grid_size,
+        max_steps=EnvironmentConfig.MAX_STEPS,
+        agent_type=args.agent
     )
 
     # Get dimensions
@@ -211,8 +289,9 @@ def human_control(args):
 
     # Create environment
     env = SnakeEnv(
-        grid_size=EnvironmentConfig.GRID_SIZE,
-        max_steps=EnvironmentConfig.MAX_STEPS
+        grid_size=args.grid_size,
+        max_steps=EnvironmentConfig.MAX_STEPS,
+        agent_type=args.agent
     )
 
     # Create human agent
@@ -238,7 +317,7 @@ def compare_agents(args):
     # Create comparison framework
     comparison = AgentComparison(
         env_config={
-            'grid_size': EnvironmentConfig.GRID_SIZE,
+            'grid_size': args.grid_size,
             'max_steps': EnvironmentConfig.MAX_STEPS
         },
         results_dir=f"{args.save_dir}/comparison",
@@ -285,6 +364,7 @@ def inspect_model(args):
 
     print(f"File size: {model_info['file_size_mb']:.2f} MB")
     print(f"Detected agent type: {model_info['agent_type'] or 'Unknown'}")
+    print(f"Detected grid size: {model_info['grid_size'] or 'Unknown'}")
     print(f"Model keys: {len(model_info['keys'])}")
 
     print("\nModel structure:")
@@ -296,6 +376,8 @@ def inspect_model(args):
         print(f"  uv run python src/main.py --mode test --agent {model_info['agent_type']} --load-model {args.load_model}")
         print(f"  # Or use auto-detection:")
         print(f"  uv run python src/main.py --mode test --auto-detect --load-model {args.load_model}")
+        if model_info['grid_size']:
+            print(f"  # Grid size will be auto-detected as: {model_info['grid_size']}x{model_info['grid_size']}")
     else:
         print(f"\nWarning: Could not determine agent type. This may not be a valid model file.")
 
@@ -303,8 +385,8 @@ def inspect_model(args):
 def _add_arguments(parser):
     """Add all command line arguments to the parser."""
     # Mode selection
-    parser.add_argument('--mode', choices=['train', 'test', 'human'], default='train',
-                        help='Mode to run (train, test, or human)')
+    parser.add_argument('--mode', choices=['train', 'test', 'human', 'curriculum', 'adaptive'], default='train',
+                        help='Mode to run (train, test, human, curriculum, or adaptive)')
 
     # Agent selection
     parser.add_argument('--agent', choices=['dqn', 'reinforce', 'ppo'], default='dqn',
@@ -315,6 +397,8 @@ def _add_arguments(parser):
                         help='Number of episodes to train/test')
     parser.add_argument('--eval-freq', type=int, default=50,
                         help='Evaluation frequency during training')
+    parser.add_argument('--grid-size', type=int, default=20,
+                        help='Size of the game grid (default: 20x20)')
 
     # Model management
     parser.add_argument('--load-model', type=str,
@@ -421,6 +505,10 @@ def main():
         test_agent(args)
     elif args.mode == 'human':
         human_control(args)
+    elif args.mode == 'curriculum':
+        curriculum_train_agent(args)
+    elif args.mode == 'adaptive':
+        adaptive_train_agent(args)
     else:
         parser.print_help()
 

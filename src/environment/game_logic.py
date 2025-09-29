@@ -2,7 +2,13 @@ import random
 import numpy as np
 from typing import List, Tuple, Optional
 
-from .constants import UP, RIGHT, DOWN, LEFT, EMPTY, SNAKE_BODY, SNAKE_HEAD, FOOD, REWARD_FOOD, REWARD_DEATH, REWARD_STEP, REWARD_REVISIT, REWARD_OSCILLATE, REWARD_CLOSER, REWARD_FARTHER
+from .constants import (
+    UP, RIGHT, DOWN, LEFT, EMPTY, SNAKE_BODY, SNAKE_HEAD, FOOD,
+    REWARD_STEP, REWARD_SURVIVAL, REWARD_SURVIVAL_PG, REWARD_NEW_CELL, RECENT_VISIT_WINDOW,
+    REWARD_REVISIT, REWARD_OSCILLATE, REWARD_CLOSER, REWARD_FARTHER,
+    REWARD_DEATH_BASE, REWARD_FOOD_BASE, SURVIVAL_THRESHOLD, DEATH_REDUCTION_RATE,
+    FOOD_SCORE_MULTIPLIER, MIN_DEATH_PENALTY_RATIO
+)
 
 
 class SnakeGame:
@@ -12,16 +18,18 @@ class SnakeGame:
     Uses integer grid coordinates and direction constants.
     """
 
-    def __init__(self, grid_size: int = 20, initial_length: int = 1, seed: Optional[int] = None):
+    def __init__(self, grid_size: int = 20, initial_length: int = 1, seed: Optional[int] = None, agent_type: str = "dqn"):
         """Initialize Snake game.
 
         Args:
             grid_size: Size of square game grid (default: 20x20)
             initial_length: Initial length of snake (default: 1)
             seed: Optional random seed for reproducible games
+            agent_type: Type of agent ("dqn", "ppo", "reinforce") for reward tuning
         """
         self.grid_size = grid_size
         self.initial_length = initial_length
+        self.agent_type = agent_type
         self.reset(seed)
 
     def reset(self, seed: Optional[int] = None) -> np.ndarray:
@@ -47,6 +55,7 @@ class SnakeGame:
         # Track visited positions for anti-oscillation rewards
         self.visited_positions = set()  # All positions ever visited
         self.position_history = []      # Last few positions for oscillation detection
+        self.recent_positions = []      # Recent positions for exploration bonus tracking
 
         # Track distance to food for guidance rewards
         self.previous_distance_to_food = self._manhattan_distance(self.snake[0], self.food)
@@ -111,18 +120,26 @@ class SnakeGame:
         elif self.direction == LEFT:
             new_head = (head_x - 1, head_y)
 
-        reward = REWARD_STEP
+        # Start with survival bonus (algorithm-specific)
+        if self.agent_type in ["ppo", "reinforce"]:
+            reward = REWARD_SURVIVAL_PG  # Higher bonus for policy gradient methods
+        else:
+            reward = REWARD_SURVIVAL     # Standard bonus for DQN
 
         if self._is_collision(new_head):
             self.game_over = True
-            reward = REWARD_DEATH
+            reward = self._calculate_death_penalty()
             return self.get_state(), reward, True, {"score": self.score}
 
-        # Apply position-based penalties before moving
+        # Bonus for exploring recently unvisited cells (prevents oscillation abuse)
+        if new_head not in self.recent_positions:
+            reward += REWARD_NEW_CELL
+
+        # Apply position-based penalties (but lighter)
         position_penalty = self._calculate_position_penalty(new_head)
         reward += position_penalty
 
-        # Apply distance-based reward for food guidance
+        # Apply distance-based reward for food guidance (stronger)
         distance_reward = self._calculate_distance_reward(new_head)
         reward += distance_reward
 
@@ -133,7 +150,7 @@ class SnakeGame:
 
         if new_head == self.food:
             self.score += 1
-            reward = REWARD_FOOD
+            reward = self._calculate_food_reward()
             self.food = self._spawn_food()
             # Update distance tracking for new food position
             self.previous_distance_to_food = self._manhattan_distance(self.snake[0], self.food)
@@ -286,6 +303,11 @@ class SnakeGame:
         if len(self.position_history) > 3:
             self.position_history.pop(0)
 
+        # Add to recent positions and keep only last RECENT_VISIT_WINDOW positions
+        self.recent_positions.append(new_head)
+        if len(self.recent_positions) > RECENT_VISIT_WINDOW:
+            self.recent_positions.pop(0)
+
     def _manhattan_distance(self, pos1: Tuple[int, int], pos2: Tuple[int, int]) -> float:
         """Calculate Manhattan distance between two positions.
 
@@ -325,3 +347,33 @@ class SnakeGame:
         self.previous_distance_to_food = new_distance
 
         return distance_reward
+
+    def _calculate_death_penalty(self) -> float:
+        """Calculate death penalty based on survival time.
+
+        Longer survival reduces the death penalty to encourage exploration.
+
+        Returns:
+            Death penalty value (negative float)
+        """
+        if self.steps < SURVIVAL_THRESHOLD:
+            # Full penalty for quick death
+            return REWARD_DEATH_BASE
+        else:
+            # Reduce penalty based on survival time
+            survival_bonus = (self.steps - SURVIVAL_THRESHOLD) * DEATH_REDUCTION_RATE
+            reduced_penalty = REWARD_DEATH_BASE + survival_bonus  # Adding positive bonus to negative penalty
+
+            # Ensure penalty doesn't become too small
+            min_penalty = REWARD_DEATH_BASE * MIN_DEATH_PENALTY_RATIO
+            return max(min_penalty, reduced_penalty)
+
+    def _calculate_food_reward(self) -> float:
+        """Calculate food reward based on current score.
+
+        Higher scores increase the value of each food item to encourage growth.
+
+        Returns:
+            Food reward value (positive float)
+        """
+        return REWARD_FOOD_BASE + (self.score * FOOD_SCORE_MULTIPLIER)

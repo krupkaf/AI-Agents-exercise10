@@ -12,11 +12,22 @@ SNAKE_BODY = 1
 SNAKE_HEAD = 2
 FOOD = 3
 
-# Reward values (float for precise calculations)
-REWARD_FOOD = 20.0          # Reward for eating food
-REWARD_DEATH = -10.0        # Penalty for collision/death
-REWARD_STEP = -0.001        # Small penalty for each step
-REWARD_REVISIT = -1.0       # Penalty for returning to previously visited position
-REWARD_OSCILLATE = -3.0     # Heavy penalty for returning to position from 2 steps ago
-REWARD_CLOSER = 0.1         # Reward for moving closer to food
-REWARD_FARTHER = -0.1       # Penalty for moving farther from food
+# Reward values - "Survival First" philosophy
+REWARD_STEP = 0.0            # No penalty for movement
+REWARD_SURVIVAL = 0.1        # Bonus for each step survived (base for DQN)
+REWARD_SURVIVAL_PG = 0.5     # Higher survival bonus for policy gradient methods (PPO/REINFORCE)
+REWARD_DEATH_BASE = -200.0   # High death penalty, but survival bonuses compensate
+REWARD_FOOD_BASE = 100.0     # High food reward
+REWARD_NEW_CELL = 0.5        # Bonus for exploring recently unvisited cells
+RECENT_VISIT_WINDOW = 20     # Cells visited in last N steps don't give exploration bonus
+REWARD_REVISIT = -0.05       # Small penalty for revisiting (sometimes necessary)
+REWARD_OSCILLATE = -0.2      # Light penalty for oscillation (but not prohibitive)
+REWARD_CLOSER = 1.0          # Strong reward for getting closer to food
+REWARD_FARTHER = -0.3        # Moderate penalty for moving away from food
+
+# Progressive reward system parameters
+SURVIVAL_THRESHOLD = 50      # Minimum steps before death penalty reduction
+DEATH_REDUCTION_RATE = 0.5   # Rate of death penalty reduction per step over threshold
+FOOD_SCORE_MULTIPLIER = 10.0  # Multiplier for progressive food reward (base + score * multiplier)
+MIN_DEATH_PENALTY_RATIO = 0.2  # Minimum death penalty as ratio of base penalty
+

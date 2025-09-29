@@ -40,8 +40,8 @@ class REINFORCEAgent(BaseAgent):
         self.hidden_size = config.get('hidden_size', 256)
         self.entropy_weight = config.get('entropy_weight', 0.01)
 
-        # Initialize networks
-        grid_size = int(np.sqrt(state_dim)) if state_dim == 400 else 20
+        # Initialize networks - calculate grid_size from state_dim
+        grid_size = int(np.sqrt(state_dim))
         self.policy_net = PolicyNetwork(
             grid_size=grid_size,
             action_dim=action_dim,
@@ -281,3 +281,17 @@ class REINFORCEAgent(BaseAgent):
         """Set networks to training or evaluation mode."""
         self.policy_net.train(training)
         self.baseline_net.train(training)
+
+    def get_model_state(self) -> Dict[str, Any]:
+        """Get the current model state dictionary for transfer learning."""
+        return {
+            'policy_net': self.policy_net.state_dict(),
+            'baseline_net': self.baseline_net.state_dict()
+        }
+
+    def load_model_state(self, state_dict: Dict[str, Any]) -> None:
+        """Load model state from dictionary for transfer learning."""
+        if 'policy_net' in state_dict:
+            self.policy_net.load_state_dict(state_dict['policy_net'], strict=False)
+        if 'baseline_net' in state_dict:
+            self.baseline_net.load_state_dict(state_dict['baseline_net'], strict=False)

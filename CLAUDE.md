@@ -45,7 +45,8 @@ snake-rl/
 │   │   └── colors.py             # Color constants and themes
 │   ├── utils/
 │   │   ├── __init__.py
-│   │   └── config.py             # Configuration parameters
+│   │   ├── config.py             # Configuration parameters
+│   │   └── model_utils.py        # Smart model detection utilities
 │   └── main.py                   # Main training and testing script
 ├── demo/
 │   ├── __init__.py
@@ -156,7 +157,7 @@ snake-rl/
 ## Key Implementation Details
 
 ### Environment Specifications
-- **State Space**: 20x20 grid representation or feature vector
+- **State Space**: Configurable grid size (default 20x20) or feature vector representation
 - **Action Space**: 4 discrete actions (up, right, down, left)
 - **Food System**: Single food item, respawns immediately when eaten at random empty position
 - **Snake Growth**: Initial length 1 segment, grows by 1 segment per food eaten
@@ -164,6 +165,7 @@ snake-rl/
 - **Episode Termination**:
   - `terminated=True`: Collision occurred (snake died)
   - `truncated=True`: Time limit reached (1000 steps)
+- **Grid Size Auto-Detection**: Models automatically detect and use correct grid size during testing
 - **Reward System** (Anti-Oscillation Design):
   - Food consumption reward (encourages active seeking)
   - Collision/death penalty
@@ -196,10 +198,17 @@ snake-rl/
 
 ### Visualization Features
 - **Real-time rendering**: 800x600 PyGame window
-- **Game display**: 20x20 grid with snake and food
+- **Game display**: Configurable grid size with snake and food
 - **Statistics panel**: Score, episode, epsilon, steps
 - **Training monitoring**: Live graphs of performance metrics
 - **Interactive controls**: Pause, resume, screenshot, speed control, episode skip
+
+### Smart Model Detection Features
+- **Agent Type Detection**: Automatically identifies DQN, REINFORCE, or PPO models based on state dict structure
+- **Grid Size Detection**: Extracts grid size from neural network layer dimensions to prevent compatibility issues
+- **Model Inspection**: Detailed model file analysis including type, grid size, file structure, and usage examples
+- **Auto-Testing**: Seamless model testing with `--auto-detect` flag without manual parameter specification
+- **Compatibility Prevention**: Prevents timeout issues when testing models with different grid sizes than default
 
 ## Installation Commands
 ```bash
@@ -225,11 +234,11 @@ uv run python src/main.py --agent reinforce --episodes 500
 uv run python src/main.py --agent ppo --episodes 1000
 uv run python src/main.py --compare-all --episodes 500
 
-# Test models with automatic agent type detection
+# Test models with automatic agent type and grid size detection
 uv run python src/main.py --mode test --auto-detect --load-model models/04ppo_best.pth
 uv run python src/main.py --mode test --auto-detect --load-model models/05reinforce_best.pth
 
-# Inspect model files (shows type, size, structure)
+# Inspect model files (shows type, grid size, file size, structure)
 uv run python src/main.py --inspect-model --load-model models/04ppo_best.pth
 
 # Run unit tests
@@ -258,4 +267,4 @@ uv run python src/main.py --mode human --episodes 5
 6. ✅ **Submission**: Public GitHub repository with MIT license ready for submission
 7. ✅ **Testing**: Comprehensive unit test suite (26 tests) for all components
 8. ✅ **Comparison Framework**: Multi-agent benchmarking with automatic results analysis
-9. ✅ **Smart Model Management**: Automatic agent type detection from model file structure (`src/utils/model_utils.py`)
+9. ✅ **Smart Model Management**: Automatic agent type and grid size detection from model file structure (`src/utils/model_utils.py`)

@@ -49,7 +49,7 @@ class PPOAgent(BaseAgent):
         self.buffer_size = config.get('buffer_size', 2048)
 
         # Initialize network
-        grid_size = int(np.sqrt(state_dim)) if state_dim == 400 else 20
+        grid_size = int(np.sqrt(state_dim))
         self.actor_critic = ActorCriticNetwork(
             grid_size=grid_size,
             action_dim=action_dim,
@@ -380,3 +380,11 @@ class PPOAgent(BaseAgent):
     def set_training_mode(self, training: bool) -> None:
         """Set network to training or evaluation mode."""
         self.actor_critic.train(training)
+
+    def get_model_state(self) -> Dict[str, Any]:
+        """Get the current model state dictionary for transfer learning."""
+        return self.actor_critic.state_dict()
+
+    def load_model_state(self, state_dict: Dict[str, Any]) -> None:
+        """Load model state from dictionary for transfer learning."""
+        self.actor_critic.load_state_dict(state_dict, strict=False)
