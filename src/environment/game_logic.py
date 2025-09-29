@@ -5,9 +5,9 @@ from typing import List, Tuple, Optional
 from .constants import (
     UP, RIGHT, DOWN, LEFT, EMPTY, SNAKE_BODY, SNAKE_HEAD, FOOD,
     REWARD_STEP, REWARD_SURVIVAL, REWARD_SURVIVAL_PG, REWARD_NEW_CELL, RECENT_VISIT_WINDOW,
-    REWARD_REVISIT, REWARD_OSCILLATE, REWARD_CLOSER, REWARD_FARTHER,
+    REWARD_REVISIT, REWARD_OSCILLATE, REWARD_PATTERN_REPEAT, REWARD_CLOSER, REWARD_FARTHER,
     REWARD_DEATH_BASE, REWARD_FOOD_BASE, SURVIVAL_THRESHOLD, DEATH_REDUCTION_RATE,
-    FOOD_SCORE_MULTIPLIER, MIN_DEATH_PENALTY_RATIO
+    FOOD_SCORE_MULTIPLIER, MIN_DEATH_PENALTY_RATIO, PATTERN_DETECTION_WINDOW
 )
 
 
@@ -56,6 +56,7 @@ class SnakeGame:
         self.visited_positions = set()  # All positions ever visited
         self.position_history = []      # Last few positions for oscillation detection
         self.recent_positions = []      # Recent positions for exploration bonus tracking
+        self.direction_history = []     # Track recent directions for pattern detection
 
         # Track distance to food for guidance rewards
         self.previous_distance_to_food = self._manhattan_distance(self.snake[0], self.food)
@@ -147,6 +148,7 @@ class SnakeGame:
 
         # Update position tracking
         self._update_position_tracking(new_head)
+        self._update_direction_tracking()
 
         if new_head == self.food:
             self.score += 1
@@ -170,12 +172,22 @@ class SnakeGame:
         """
         x, y = position
 
+        # Check wall collision
         if x < 0 or x >= self.grid_size or y < 0 or y >= self.grid_size:
             return True
 
-        # Check collision with snake body (excluding tail which will be removed)
-        if position in self.snake[:-1]:
-            return True
+        # Check if new position would eat food
+        will_eat_food = (position == self.food)
+
+        if will_eat_food:
+            # If eating food, snake will grow - check collision with entire current body
+            if position in self.snake:
+                return True
+        else:
+            # If not eating food, tail will be removed - but still check collision with current body
+            # This prevents oscillation by not allowing movement to any current body position
+            if position in self.snake:
+                return True
 
         return False
 
@@ -269,7 +281,7 @@ class SnakeGame:
         return self.steps
 
     def _calculate_position_penalty(self, new_head: Tuple[int, int]) -> float:
-        """Calculate penalty for visiting specific positions.
+        """Calculate penalty for visiting specific positions and repeating patterns.
 
         Args:
             new_head: New head position to evaluate
@@ -286,6 +298,10 @@ class SnakeGame:
         # Check if oscillating (returning to position from 2 steps ago)
         if len(self.position_history) >= 2 and new_head == self.position_history[-2]:
             penalty += REWARD_OSCILLATE
+
+        # Check for repeating movement patterns
+        pattern_penalty = self._detect_movement_pattern()
+        penalty += pattern_penalty
 
         return penalty
 
@@ -377,3 +393,59 @@ class SnakeGame:
             Food reward value (positive float)
         """
         return REWARD_FOOD_BASE + (self.score * FOOD_SCORE_MULTIPLIER)
+
+    def _update_direction_tracking(self) -> None:
+        """Update direction history for pattern detection."""
+        # Add current direction to history
+        self.direction_history.append(self.direction)
+
+        # Keep only recent directions for pattern analysis
+        if len(self.direction_history) > PATTERN_DETECTION_WINDOW:
+            self.direction_history.pop(0)
+
+    def _detect_movement_pattern(self) -> float:
+        """Detect if the snake is repeating movement patterns.
+
+        Specifically targets A-B-A-B oscillation patterns that allow
+        the snake to oscillate between two adjacent cells indefinitely.
+
+        Returns:
+            Penalty value (negative float) if pattern detected, 0.0 otherwise
+        """
+        if len(self.direction_history) < 4:
+            return 0.0
+
+        # Check for simple A-B-A-B oscillation pattern in recent moves
+        recent_directions = self.direction_history[-4:]
+
+        # Pattern: direction1 -> direction2 -> direction1 -> direction2
+        if (recent_directions[0] == recent_directions[2] and
+            recent_directions[1] == recent_directions[3] and
+            recent_directions[0] != recent_directions[1]):
+
+            # Additional check: ensure these are opposite directions
+            # UP-DOWN or LEFT-RIGHT oscillation
+            if ((recent_directions[0] == UP and recent_directions[1] == DOWN) or
+                (recent_directions[0] == DOWN and recent_directions[1] == UP) or
+                (recent_directions[0] == LEFT and recent_directions[1] == RIGHT) or
+                (recent_directions[0] == RIGHT and recent_directions[1] == LEFT)):
+
+                return REWARD_PATTERN_REPEAT
+
+        # Check for longer repeating patterns (6 moves)
+        if len(self.direction_history) >= 6:
+            recent_6 = self.direction_history[-6:]
+            # Pattern: A-B-A-B-A-B
+            if (recent_6[0] == recent_6[2] == recent_6[4] and
+                recent_6[1] == recent_6[3] == recent_6[5] and
+                recent_6[0] != recent_6[1]):
+
+                # Same opposite direction check
+                if ((recent_6[0] == UP and recent_6[1] == DOWN) or
+                    (recent_6[0] == DOWN and recent_6[1] == UP) or
+                    (recent_6[0] == LEFT and recent_6[1] == RIGHT) or
+                    (recent_6[0] == RIGHT and recent_6[1] == LEFT)):
+
+                    return REWARD_PATTERN_REPEAT * 2  # Stronger penalty for longer patterns
+
+        return 0.0

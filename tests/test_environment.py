@@ -183,6 +183,39 @@ class TestSnakeEnv:
         assert rgb_array.shape == (5, 5, 3)
         assert rgb_array.dtype == np.uint8
 
+    def test_oscillation_prevention_after_food(self):
+        """Test that oscillation is prevented after food consumption."""
+        # Create game with controlled setup
+        game = SnakeGame(grid_size=5, agent_type='dqn')
+        game.snake = [(1, 1)]
+        game.food = (1, 0)
+
+        # Eat food - snake grows to length 2
+        state, reward, done, info = game.step(UP)
+        assert len(game.snake) == 2
+        assert not done
+
+        # Try to oscillate - should detect collision immediately
+        state, reward, done, info = game.step(DOWN)
+        assert done, "Snake should collide when trying to move to occupied body position"
+
+    def test_normal_movement_after_food(self):
+        """Test that normal movement still works after food consumption."""
+        game = SnakeGame(grid_size=5, agent_type='dqn')
+        game.snake = [(2, 2)]
+        game.food = (2, 1)
+
+        # Eat food
+        state, reward, done, info = game.step(UP)
+        assert len(game.snake) == 2
+        assert not done
+
+        # Normal movements should work fine
+        normal_moves = [LEFT, DOWN, RIGHT]
+        for action in normal_moves:
+            state, reward, done, info = game.step(action)
+            assert not done, f"Normal movement {action} should not cause collision"
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

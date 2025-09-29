@@ -21,9 +21,13 @@ REWARD_FOOD_BASE = 100.0     # High food reward
 REWARD_NEW_CELL = 0.5        # Bonus for exploring recently unvisited cells
 RECENT_VISIT_WINDOW = 20     # Cells visited in last N steps don't give exploration bonus
 REWARD_REVISIT = -0.05       # Small penalty for revisiting (sometimes necessary)
-REWARD_OSCILLATE = -0.2      # Light penalty for oscillation (but not prohibitive)
+REWARD_OSCILLATE = -0.8      # Light penalty for oscillation (but not prohibitive)
+REWARD_PATTERN_REPEAT = -5.0 # Strong penalty for repeating movement patterns
 REWARD_CLOSER = 1.0          # Strong reward for getting closer to food
 REWARD_FARTHER = -0.3        # Moderate penalty for moving away from food
+
+# Pattern detection parameters
+PATTERN_DETECTION_WINDOW = 8  # Number of recent moves to analyze for patterns
 
 # Progressive reward system parameters
 SURVIVAL_THRESHOLD = 50      # Minimum steps before death penalty reduction
